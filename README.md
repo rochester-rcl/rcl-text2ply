@@ -28,4 +28,5 @@ Or a pre-compiled binary
   -p, --profile         enable the profiler (for testing purposes)
 ```
 
-#### Downloads
+#### Pre-Compiled Binary Downloads
+[Linux 64-bit](https://github.com/rochester-rcl/rcl-text2ply/releases/download/v0.1-alpha/text2ply)
