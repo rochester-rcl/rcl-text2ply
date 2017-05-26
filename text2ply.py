@@ -151,9 +151,9 @@ class PLYConvert(object):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Run a script to convert a PTS file to a PLY")  # Setting up our Argument Parser
-    parser.add_argument('-i', '--input_file', help="input .pts file", required="true",
-                        type=str)  # Adding an input argument
+        description="Run a script to convert a PTS or XYZ file to a PLY")
+    parser.add_argument('-i', '--input_file', help="input .pts or .xyz file", required="true",
+                        type=str)  
     parser.add_argument('-o', '--output_file', help="output ply filename / path", required="true", type=str)
     parser.add_argument('-rh', '--readheader',
                         help="use this option to read the header of the pts file for the vertex count",
@@ -166,7 +166,7 @@ if __name__ == "__main__":
                         default=5000, type=int)
     parser.add_argument('-p', '--profile', help="enable the profiler (for testing purposes)", action="store_true")
 
-    args = vars(parser.parse_args())  # Get some variables from parse_args dictionary (directory, output)
+    args = vars(parser.parse_args())
 
     file_input = args['input_file']
     ply_output = args['output_file']
