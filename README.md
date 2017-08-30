@@ -3,13 +3,21 @@ A Python tool for converting laser scan data stored as ASCII text (.pts, .xyz) t
 
 #### Dependencies
 Python 3
+
+Pip
+
+Cython
 #### Usage
 
-To run via python
+To run via python, first compile the Cython module:
+
+`python setup.py build_ext --inplace`
+
+Then run:
 
 `python3 text2ply.py [options]`
 
-Or a pre-compiled binary
+Or use a pre-compiled binary
 
 `./text2ply [options]`
 
