@@ -34,7 +34,8 @@ class PLYConvert(object):
     ####################################################################################################################
 
     def get_vertex_count(self):
-        vcount = 0
+        cdef int vcount = 0
+        cdef list lines
         while True:
             lines = list(islice(self.in_file, self.max_vertices))
             if not lines:
@@ -45,6 +46,10 @@ class PLYConvert(object):
         return vcount
 
     def get_ply_format(self):
+        cdef str encoding_format
+        cdef str byte_order
+        cdef str element_vertex
+        cdef list header
         if self.encoding == 'ascii':
             encoding_format = 'format ascii 1.0\n'
             return encoding_format
@@ -66,7 +71,6 @@ class PLYConvert(object):
             header = ['ply\n', encoding_format, element_vertex, 'property double x\n', 'property double y\n',
                       'property double z\n', 'property uchar red\n', 'property uchar green\n',
                       'property uchar blue\n', 'end_header\n']
-            self.header = header
 
         elif self.extension == 'xyz':
             self.vertex_count = self.get_vertex_count()
@@ -77,6 +81,7 @@ class PLYConvert(object):
         self.header = header
 
     def read_ply(self):
+        cdef list lines
         self.in_file.seek(0)
         if self.extension == 'pts':
             next(self.in_file)
@@ -104,6 +109,7 @@ class PLYConvert(object):
         self.in_file = None
 
     def write_ply(self):
+
         for line in self.header:
             if self.encoding == 'binary':
                 self.ply_file.write(line.encode('ascii'))
@@ -129,38 +135,39 @@ class PLYConvert(object):
     # STATIC METHODS
     ####################################################################################################################
     @staticmethod
-    def pack_vertex(vertex):
-        floats = [float(point) for point in vertex[0:3]]
-        ints = [int(rgb) for rgb in vertex[3:6]]
+    def pack_vertex(list vertex):
+
+        cdef list floats = [float(point) for point in vertex[0:3]]
+        cdef list ints = [int(rgb) for rgb in vertex[3:6]]
         points = pack('d' * len(floats), *floats)
         rgb = pack('B' * len(ints), *ints)
         return points + rgb
 
     @staticmethod
-    def format_pts_vertex_ascii(line):
-        vertex = line.split()
+    def format_pts_vertex_ascii(str line):
+        cdef list vertex = line.split()
         del vertex[3]
         return ' '.join(vertex) + '\n'
 
     @staticmethod
-    def format_pts_vertex_binary(line):
-        vertex = line.split()
+    def format_pts_vertex_binary(str line):
+        cdef list vertex = line.split()
         del (vertex[3])
         return PLYConvert.pack_vertex(vertex)
 
     @staticmethod
-    def format_xyz_vertex_ascii(line):
-        vertex = PLYConvert.validate_xyz_data(line)
+    def format_xyz_vertex_ascii(str line):
+        cdef list vertex = PLYConvert.validate_xyz_data(line)
         return ' '.join(vertex) + '\n'
 
     @staticmethod
-    def format_xyz_vertex_binary(line):
-        vertex = PLYConvert.validate_xyz_data(line)
+    def format_xyz_vertex_binary(str line):
+        cdef list vertex = PLYConvert.validate_xyz_data(line)
         return PLYConvert.pack_vertex(vertex)
 
     @staticmethod
-    def validate_xyz_data(line):
-        vertex = line.split()
+    def validate_xyz_data(str line):
+        cdef list vertex = line.split()
         if len(vertex) == 8:
             del vertex[0:2]
         return vertex
