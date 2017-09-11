@@ -86,7 +86,7 @@ class PLYConvert(object):
         if self.extension == 'xyz':
             self.vertex_count = self.get_vertex_count()
             total_vertices = self.vertex_count
-            if self.sample_val is not False:
+            if self.sample_val != -1:
                 total_vertices = self.sample_val
 
             element_vertex = 'element vertex {}\n'.format(total_vertices)
@@ -96,44 +96,32 @@ class PLYConvert(object):
 
     def read_ply(self):
         cdef list lines
+        cdef int n_iterations = math.ceil(self.vertex_count / self.max_vertices)
+        cdef int remainder = self.vertex_count % self.max_vertices
+        cdef int current_sample_count = 0
+        cdef int sample_chunks = math.floor(self.sample_val / n_iterations)
+
         self.in_file.seek(0)
         if self.extension == 'pts':
             next(self.in_file)
-            while True:
-                lines = list(islice(self.in_file, self.max_vertices))
-                if not lines:
-                    break
-                if self.encoding == 'ascii':
-                    self.read_queue.put(map(PLYConvert.format_pts_vertex_ascii, lines))
-                else:
-                    self.read_queue.put(map(PLYConvert.format_pts_vertex_binary, lines))
 
-        elif self.extension == 'xyz':
+        for i in range(0, n_iterations):
+            lines = list(islice(self.in_file, self.max_vertices))
             if self.sample_val != -1:
-                n_iterations = math.ceil(self.vertex_count / self.max_vertices)
-                sample_chunks = math.floor(self.sample_val / n_iterations)
-                remainder = self.sample_val % n_iterations
-                for i in range(0, n_iterations):
-                    lines = list(islice(self.in_file, self.max_vertices))
-
-                    if len(lines) == remainder:
-                        sample = random.sample(lines, remainder)
-                    else:
-                        sample = random.sample(lines, sample_chunks)
-                    if self.encoding == 'ascii':
-                        self.read_queue.put(map(PLYConvert.format_xyz_vertex_ascii, sample))
-                    else:
-                        self.read_queue.put(map(PLYConvert.format_xyz_vertex_binary, sample))
-
+                if len(lines) == remainder:
+                    sample = random.sample(lines, self.sample_val - current_sample_count)
+                else:
+                    sample = random.sample(lines, sample_chunks)
+                current_sample_count += len(sample)
             else:
-                while True:
-                    lines = list(islice(self.in_file, self.max_vertices))
-                    if not lines:
-                        break
-                    if self.encoding == 'ascii':
-                        self.read_queue.put(map(PLYConvert.format_xyz_vertex_ascii, lines))
-                    else:
-                        self.read_queue.put(map(PLYConvert.format_xyz_vertex_binary, lines))
+                sample = lines
+
+            if self.encoding == 'ascii':
+                self.read_queue.put(map(PLYConvert.format_xyz_vertex_ascii if self.extension == 'xyz'
+                                        else PLYConvert.format_pts_ascii, sample))
+            else:
+                self.read_queue.put(map(PLYConvert.format_xyz_vertex_binary if self.extension == 'xyz'
+                                        else PLYConvert.format_pts_binary, sample))
 
         self.read_queue.put(None)
         self.in_file.close()
