@@ -18,7 +18,12 @@ if __name__ == "__main__":
                         help="max number of vertices (lines) to read into memory before sending "
                              "\n to the worker queue (default = 5000)",
                         default=5000, type=int)
+    parser.add_argument('-s', '--subsample',
+                        help="number of points to be randomly sampled from the source cloud "
+                             "\n will yield an output cloud with n points (default = -1 (all points))",
+                        default=-1, type=int)
     parser.add_argument('-p', '--profile', help="enable the profiler (for testing purposes)", action="store_true")
+
 
     args = vars(parser.parse_args())
 
@@ -28,8 +33,9 @@ if __name__ == "__main__":
     max_vertices = args['max_vertices']
     read_header = args['readheader']
     profile = args['profile']
+    subsample = args['subsample']
 
-    ply_converter = PLYConvert(file_input, encoding, ply_output, max_vertices, read_header=read_header)
+    ply_converter = PLYConvert(file_input, encoding, ply_output, max_vertices, read_header=read_header, subsample=subsample)
     print("Generating PLY Header")
     ply_converter.generate_header()
     print("Converting to {} PLY format. This could take a while".format(encoding))

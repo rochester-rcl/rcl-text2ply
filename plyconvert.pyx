@@ -2,6 +2,8 @@
 import time
 import sys
 import cProfile
+import math
+import random
 from itertools import islice
 from threading import Thread
 from queue import Queue
@@ -29,6 +31,11 @@ class PLYConvert(object):
             self.read_header = kwargs['read_header']
         except KeyError as error:
             self.read_header = False
+
+        try:
+            self.sample_val = kwargs['subsample']
+        except KeyError as error:
+            self.sample_val = -1
 
     # INSTANCE METHODS
     ####################################################################################################################
@@ -65,20 +72,27 @@ class PLYConvert(object):
             if self.read_header is True:
                 self.vertex_count = self.in_file.readline().strip()
             else:
-                line_count = self.get_vertex_count()
-                self.vertex_count = line_count - 1
+                if self.sample_val is not -1:
+                    self.vertex_count = self.sample_val
+                else:
+                    line_count = self.get_vertex_count()
+                    self.vertex_count = line_count - 1
+
             element_vertex = 'element vertex {}\n'.format(self.vertex_count)
-            header = ['ply\n', encoding_format, element_vertex, 'property double x\n', 'property double y\n',
+            self.header = ['ply\n', encoding_format, element_vertex, 'property double x\n', 'property double y\n',
                       'property double z\n', 'property uchar red\n', 'property uchar green\n',
                       'property uchar blue\n', 'end_header\n']
 
-        elif self.extension == 'xyz':
+        if self.extension == 'xyz':
             self.vertex_count = self.get_vertex_count()
-            element_vertex = 'element vertex {}\n'.format(self.vertex_count)
-            header = ['ply\n', encoding_format, element_vertex, 'property double x\n', 'property double y\n',
+            total_vertices = self.vertex_count
+            if self.sample_val is not False:
+                total_vertices = self.sample_val
+
+            element_vertex = 'element vertex {}\n'.format(total_vertices)
+            self.header = ['ply\n', encoding_format, element_vertex, 'property double x\n', 'property double y\n',
                       'property double z\n', 'property uchar red\n', 'property uchar green\n',
                       'property uchar blue\n', 'end_header\n']
-        self.header = header
 
     def read_ply(self):
         cdef list lines
@@ -95,14 +109,31 @@ class PLYConvert(object):
                     self.read_queue.put(map(PLYConvert.format_pts_vertex_binary, lines))
 
         elif self.extension == 'xyz':
-            while True:
-                lines = list(islice(self.in_file, self.max_vertices))
-                if not lines:
-                    break
-                if self.encoding == 'ascii':
-                    self.read_queue.put(map(PLYConvert.format_xyz_vertex_ascii, lines))
-                else:
-                    self.read_queue.put(map(PLYConvert.format_xyz_vertex_binary, lines))
+            if self.sample_val != -1:
+                n_iterations = math.ceil(self.vertex_count / self.max_vertices)
+                sample_chunks = math.floor(self.sample_val / n_iterations)
+                remainder = self.sample_val % n_iterations
+                for i in range(0, n_iterations):
+                    lines = list(islice(self.in_file, self.max_vertices))
+
+                    if len(lines) == remainder:
+                        sample = random.sample(lines, remainder)
+                    else:
+                        sample = random.sample(lines, sample_chunks)
+                    if self.encoding == 'ascii':
+                        self.read_queue.put(map(PLYConvert.format_xyz_vertex_ascii, sample))
+                    else:
+                        self.read_queue.put(map(PLYConvert.format_xyz_vertex_binary, sample))
+
+            else:
+                while True:
+                    lines = list(islice(self.in_file, self.max_vertices))
+                    if not lines:
+                        break
+                    if self.encoding == 'ascii':
+                        self.read_queue.put(map(PLYConvert.format_xyz_vertex_ascii, lines))
+                    else:
+                        self.read_queue.put(map(PLYConvert.format_xyz_vertex_binary, lines))
 
         self.read_queue.put(None)
         self.in_file.close()
